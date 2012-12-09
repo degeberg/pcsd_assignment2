@@ -1,0 +1,183 @@
+\documentclass[a4paper]{article}
+\usepackage{a4wide}
+\usepackage{degeberg}
+
+\title{Principles of Computer System Design \\ Assignment 2}
+\author{Daniel Egeberg}
+
+\hypersetup{pdfauthor={Daniel Egeberg},pdftitle={Principles of Computer System Design: Assignment 2}}
+
+\date{December 13, 2012}
+
+\lstset{language=Java}
+\setcounter{secnumdepth}{1}
+\usetikzlibrary{arrows,shapes}
+
+\newcommand{\mynull}{\textsc{null}}
+
+\begin{document}
+
+\maketitle
+
+\section{Exercises}
+
+\subsection{Question 1: Serializability \& Locking}
+
+\begin{enumerate}[(a)]
+    \item The graph for Schedule~1 in \autoref{fig:sched1} has the cycle $T_1
+        \to T_2 \to T_3 \to T_1$, so it is not conflict serializable. However,
+        Schedule~2 is conflict serializable because the graph in
+        \autoref{fig:sched2} is acyclic.
+
+    \item The Strict 2PL protocol only allows conflict serializable schedules,
+        so it could not have generated Schedule~1.
+
+        Foo\todo{Schedule~2 could probably be made by Strict 2PL. Add the lock operations.}
+\end{enumerate}
+
+\begin{figure}[h]
+    \centering
+    \subfloat[Schedule 1.]{
+        \label{fig:sched1}
+        \begin{tikzpicture}
+            [->,>=stealth',shorten >=1pt,auto,node distance=1.8cm,semithick]
+
+            \node (t3) [ellipse,draw] {$T_3$};
+            \node (t1) [ellipse,draw,above left of=t3] {$T_1$};
+            \node (t2) [ellipse,draw,above right of=t3] {$T_2$};
+
+            \path (t1) edge node {} (t2);
+            \path (t2) edge node {} (t3);
+            \path (t3) edge node {} (t1);
+        \end{tikzpicture}
+    }\hspace{3em}
+    \subfloat[Schedule 2.]{
+        \label{fig:sched2}
+        \begin{tikzpicture}
+            [->,>=stealth',shorten >=1pt,auto,node distance=1.8cm,semithick]
+
+            \node (t3) [ellipse,draw] {$T_3$};
+            \node (t1) [ellipse,draw,above left of=t3] {$T_1$};
+            \node (t2) [ellipse,draw,above right of=t3] {$T_2$};
+
+            \path (t3) edge node {} (t2);
+            \path (t1) edge node {} (t2);
+        \end{tikzpicture}
+    }
+    \caption{Precedence graphs.}
+    \label{fig:precedence_graph}
+\end{figure}
+
+\subsection{Question 2: Optimistic Concurrency Control}
+
+\begin{description}
+    \item[Scenario 1] $T_3$ needs to roll back. Condition~1 fails because $T_2$
+        is not done before $T_3$. Conditions~2 and 3 fail because $WS(T_2) \cap
+        RS(T_3) = \{4\}$.
+    \item[Scenario 2] $T_3$ needs to roll back. Because $WS(T_1) \cap RS(T_3) =
+        \{3\}$ thus not satisfying condition~2 or 3 for $T_1$. Condition~1 is
+        not satisfied for $T_1$ because $T_3$ begins before it is entirely
+        completed.
+    \item[Scenario 3] $T_3$ may commit because condition~2 is satisfied for
+        both $T_1$ and $T_2$ seeing as $(WS(T_1) \cup WS(T_2)) \cap RS(T_3) =
+        \emptyset$.
+\end{description}
+
+\subsection{Question 3: Recovery Concepts}
+
+\begin{enumerate}[(a)]
+    \item When using force and no-steal, the \textsc{Redo} is not necessary
+        because we are guaranteed that the changes are written to disk.
+        However, \textsc{Undo} is still necessary because we want to restore to
+        a consistent state, so we need to deal with undoing uncommitted
+        transactions.
+    \item Non-volatile storage retains the stored information when powered
+        down, such as a regular HDD\@. This is unlike volatile storage/memory
+        like RAM, that requires power at all time to retain the data.
+
+        Stable storage is non-volatile storage that also ensures atomicity of
+        write operations.
+    \item In Write-Ahead Loggin (WAL), we need to force a log write when doing
+        a commit. This is necessary because\ldots \todo{finish and add one more
+        case}
+\end{enumerate}
+
+\subsection{Question 4: ARIES}
+
+Winner transactions: $T_3$
+
+Loser transactions: $T_1$, $T_2$
+
+Start of Redo: smallest recLSN = 3
+
+Stop of Undo: 3
+
+Undone: $\{3, 4, 5, 8, 9\}$
+
+Rewritten: $\{P_1, P_2, P_3, P_5\}$
+
+\todo[inline]{Write some text and add new log entries.}
+
+\begin{table}[h]
+    \centering
+    \subfloat[Dirty page table after analysis.]{
+        \begin{tabular}{l|l}
+            \toprule
+            \textbf{pageID} & \textbf{recLSN} \\
+            \midrule
+            $P_2$ & 3 \\
+            $P_1$ & 4 \\
+            $P_5$ & 5 \\
+            $P_3$ & 6 \\
+            \bottomrule
+        \end{tabular}
+    }
+    \hspace{2mm}
+    \subfloat[Transaction table after analysis.]{
+        \begin{tabular}{l|l|l}
+            \toprule
+            \textbf{transID} & \textbf{lastLSN} & \textbf{status} \\
+            \midrule
+            $T_1$ & 4 & \texttt{U} \\
+            $T_2$ & 9 & \texttt{U} \\
+            \bottomrule
+        \end{tabular}
+    } \\
+    \subfloat[Final log after \textsc{Undo}.]{
+        \begin{tabular}{l|l|l|l|l|l}
+            \toprule
+            \textbf{LSN} & \textbf{lastLSN} & \textbf{transID} & \textbf{type} & \textbf{pageID} & \textbf{undoNextLSN} \\
+            \midrule
+            1 & - & - & begin CKPT & - & - \\
+            2 & - & - & end CKPT & - \\
+            3 & \mynull & $T_1$ & update & $P_2$ & - \\
+            4 & 3 & $T_1$ & update & $P_1$ \\
+            5 & \mynull & $T_2$ & update & $P_5$ & - \\
+            6 & \mynull & $T_3$ & update & $P_3$ & - \\
+            7 & 6 & $T_3$ & commit & - & - \\
+            8 & 5 & $T_2$ & update & $P_5$ & - \\
+            9 & 8 & $T_2$ & update & $P_3$ & - \\
+            10 & 6 & $T_3$ & end & - & - \\
+            11 & - & $T_2$ & clr & $P_3$ & 8 \\
+            12 & - & $T_2$ & clr & $P_5$ & 5 \\
+            13 & - & $T_2$ & clr & $P_5$ & \mynull \\
+            14 & - & $T_1$ & clr & $P_1$ & 3 \\
+            15 & - & $T_1$ & clr & $P_2$ & \mynull \\
+            \bottomrule
+        \end{tabular}
+    }
+    \caption{Tables resulting from running ARIES.}
+\end{table}
+
+\section{Implementation}
+
+\subsection{Question 1}
+\subsection{Question 2}
+\subsection{Question 4}
+\subsection{Question 5}
+
+\section{Extensions}
+
+\subsection{Question 6}
+
+\end{document}

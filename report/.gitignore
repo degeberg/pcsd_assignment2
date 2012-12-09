@@ -1,0 +1,8 @@
+report.pdf
+*.out
+*.log
+*.temp
+*.aux
+*.make
+*.d
+*.fls
