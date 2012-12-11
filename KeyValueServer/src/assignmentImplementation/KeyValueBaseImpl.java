@@ -145,7 +145,7 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
 
         w.lock();
         try {
-            LogRecord r = new LogRecord(this.getClass(), "insert", new Object[]{k,v});
+            LogRecord r = new LogRecord(index.getClass(), "insert", new Object[]{k,v});
             logger.logRequest(r).get();
             index.insert(k, v);
         } catch (InterruptedException | ExecutionException e) {
@@ -166,7 +166,7 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
 
         w.lock();
         try {
-            LogRecord r = new LogRecord(this.getClass(), "update", new Object[]{k,newV});
+            LogRecord r = new LogRecord(index.getClass(), "update", new Object[]{k,newV});
             logger.logRequest(r).get();
             index.update(k, newV);
         } catch (InterruptedException | ExecutionException e) {
@@ -186,7 +186,7 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
 
         w.lock();
         try {
-            LogRecord r = new LogRecord(this.getClass(), "delete", new Object[]{k});
+            LogRecord r = new LogRecord(index.getClass(), "delete", new Object[]{k});
             logger.logRequest(r).get();
             index.remove(k);
         } catch (InterruptedException | ExecutionException e) {
@@ -242,7 +242,7 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
 
         w.lock();
         try {
-            LogRecord r = new LogRecord(this.getClass(), "bulkPut", new Object[]{mappings});
+            LogRecord r = new LogRecord(index.getClass(), "bulkPut", new Object[]{mappings});
             logger.logRequest(r).get();
             index.bulkPut(mappings);
         } catch (InterruptedException | ExecutionException e) {
@@ -279,7 +279,7 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
             ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(b));
             try {
                 LogRecord r = (LogRecord) in.readObject();
-                r.invoke(this);
+                r.invoke(index);
             } finally {
                 in.close();
             }

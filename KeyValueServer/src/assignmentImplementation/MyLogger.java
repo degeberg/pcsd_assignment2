@@ -42,9 +42,8 @@ public class MyLogger extends Thread implements Logger {
 		        ByteArrayOutputStream b = new ByteArrayOutputStream();
 		        ObjectOutputStream out = new ObjectOutputStream(b);
 		        try {
-		            byte[] ba = b.toByteArray();
 		            out.writeObject(record);
-		            logFile.writeInt(ba.length);
+		            logFile.writeInt(b.size());
     		        logFile.write(b.toByteArray());
 		        } finally {
 		            out.close();

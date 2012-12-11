@@ -7,7 +7,7 @@ import assignmentImplementation.KeyValueBaseService;
 
 public class Main {
 
-    public static void main(String[] args) throws IndexOutOfBoundsException, IOException {
+    public static void main(String[] args) throws Exception {
         Endpoint.publish("http://localhost:8080/kv",
                 new KeyValueBaseService());
 
