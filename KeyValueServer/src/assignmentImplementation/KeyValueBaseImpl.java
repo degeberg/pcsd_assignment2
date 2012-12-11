@@ -269,7 +269,7 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
 	        try {
     	        size = logFile.readInt();
 	        } catch (EOFException e) {
-	            return;
+	            break;
 	        }
 	        
 	        byte[] b = new byte[size];
@@ -284,6 +284,8 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
                 in.close();
             }
 	    }
+	    
+	    initialized = true;
 	}
 
 }
