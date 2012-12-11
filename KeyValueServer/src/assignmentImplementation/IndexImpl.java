@@ -186,6 +186,11 @@ public class IndexImpl implements Index<KeyImpl,ValueListImpl>
             }
         }
     }
+    
+    public void flush() {
+        store.flush();
+    }
+    
     /*
     private Object deserialize(byte[] buf) throws IOException {
         ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(buf));

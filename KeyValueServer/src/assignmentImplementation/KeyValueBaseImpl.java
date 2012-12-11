@@ -1,11 +1,16 @@
 package assignmentImplementation;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -16,22 +21,42 @@ import keyValueBaseExceptions.ServiceAlreadyInitializedException;
 import keyValueBaseExceptions.ServiceInitializingException;
 import keyValueBaseExceptions.ServiceNotInitializedException;
 import keyValueBaseInterfaces.KeyValueBase;
+import keyValueBaseInterfaces.KeyValueBaseLog;
+import keyValueBaseInterfaces.LogRecord;
 import keyValueBaseInterfaces.Pair;
 import keyValueBaseInterfaces.Predicate;
 
-public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl> {
+public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, KeyValueBaseLog<KeyImpl, ValueListImpl> {
+    private static final String LOG_PATH = "/tmp/pcsd_log";
+    
     private boolean initialized;
     private IndexImpl index;
     private ReentrantReadWriteLock rwl;
     private Lock r;
     private Lock w;
+    private MyLogger logger;
+    private Thread checkpointer;
 
-    public KeyValueBaseImpl(IndexImpl index) {
+    public KeyValueBaseImpl(IndexImpl index) throws Exception {
         initialized = false;
         this.index = index;
         rwl = new ReentrantReadWriteLock();
         r = rwl.readLock();
         w = rwl.writeLock();
+        
+        RandomAccessFile logFile = new RandomAccessFile(LOG_PATH, "rws");
+        
+        logger = new MyLogger(logFile);
+        logger.start();
+        
+        if (logFile.length() > 0) { // we probably crashed
+            restore(logFile);
+        }
+        
+        logger.enable();
+        
+        checkpointer = new MyCheckpointer(this, index);
+        checkpointer.start();
     }
 
     @Override
@@ -120,7 +145,12 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl> {
 
         w.lock();
         try {
+            LogRecord r = new LogRecord(this.getClass(), "insert", new Object[]{k,v});
+            logger.logRequest(r).get();
             index.insert(k, v);
+        } catch (InterruptedException | ExecutionException e) {
+            // TODO What else to do?
+            throw new RuntimeException(e);
         } finally {
             w.unlock();
         }
@@ -136,7 +166,12 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl> {
 
         w.lock();
         try {
+            LogRecord r = new LogRecord(this.getClass(), "update", new Object[]{k,newV});
+            logger.logRequest(r).get();
             index.update(k, newV);
+        } catch (InterruptedException | ExecutionException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         } finally {
             w.unlock();
         }
@@ -151,7 +186,12 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl> {
 
         w.lock();
         try {
+            LogRecord r = new LogRecord(this.getClass(), "delete", new Object[]{k});
+            logger.logRequest(r).get();
             index.remove(k);
+        } catch (InterruptedException | ExecutionException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         } finally {
             w.unlock();
         }
@@ -202,10 +242,48 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl> {
 
         w.lock();
         try {
+            LogRecord r = new LogRecord(this.getClass(), "bulkPut", new Object[]{mappings});
+            logger.logRequest(r).get();
             index.bulkPut(mappings);
+        } catch (InterruptedException | ExecutionException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         } finally {
             w.unlock();
         }
     }
+    
+	@Override
+	public void quiesce() {
+	    w.lock();
+	}
+
+	@Override
+	public void resume() {
+		w.unlock();
+	}
+	
+	private void restore(RandomAccessFile logFile) throws Exception {
+	    while (true) {
+	        int size;
+	        try {
+    	        size = logFile.readInt();
+	        } catch (EOFException e) {
+	            return;
+	        }
+	        
+	        byte[] b = new byte[size];
+	        while (size > 0) {
+	            size -= logFile.read(b);
+	        }
+            ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(b));
+            try {
+                LogRecord r = (LogRecord) in.readObject();
+                r.invoke(this);
+            } finally {
+                in.close();
+            }
+	    }
+	}
 
 }

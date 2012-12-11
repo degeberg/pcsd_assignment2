@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 
-import keyValueBaseInterfaces.MemoryMappedFile;
+import keyValueBaseInterfaces.MemoryMappedPinnable;
 import keyValueBaseInterfaces.Store;
 
 public class StoreImpl implements Store
@@ -12,7 +12,7 @@ public class StoreImpl implements Store
     final private static long TOTAL_SIZE = 10737418240L; // 10 GB
     
     private RandomAccessFile raf;
-    private MemoryMappedFile mmapfile;
+    private MemoryMappedPinnable mmapfile;
     
     public long getTotalSize()
     {
@@ -22,7 +22,7 @@ public class StoreImpl implements Store
     public StoreImpl() throws IndexOutOfBoundsException, IOException {
         raf = new RandomAccessFile("/tmp/pcsd_store", "rw");
         raf.setLength(TOTAL_SIZE);
-        mmapfile = new MemoryMappedFile(raf.getChannel(), FileChannel.MapMode.READ_WRITE, 0, TOTAL_SIZE);
+        mmapfile = new MemoryMappedPinnable(raf.getChannel(), FileChannel.MapMode.READ_WRITE, 0, TOTAL_SIZE);
     }
 
     @Override
@@ -35,6 +35,10 @@ public class StoreImpl implements Store
     @Override
     public void write(Long position, byte[] value) {
         mmapfile.put(value, position);
+    }
+    
+    public void flush() {
+        mmapfile.flush();
     }
     
 }

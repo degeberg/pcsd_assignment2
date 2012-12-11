@@ -27,7 +27,7 @@ public class KeyValueBaseService {
 	@WebMethod
 	public void dummy(LengthPredicate p) { }
 	
-    public KeyValueBaseService() throws IndexOutOfBoundsException, IOException {
+    public KeyValueBaseService() throws Exception {
     	idx = new IndexImpl();
     	lort = new KeyValueBaseImpl(idx);
     }

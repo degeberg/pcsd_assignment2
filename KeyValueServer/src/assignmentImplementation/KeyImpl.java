@@ -1,12 +1,15 @@
 package assignmentImplementation;
 
+import java.io.Serializable;
+
 import javax.xml.bind.annotation.XmlRootElement;
 
 import keyValueBaseInterfaces.Key;
 
 @XmlRootElement
-public class KeyImpl implements Key<KeyImpl>
+public class KeyImpl implements Key<KeyImpl>, Serializable
 {
+    private static final long serialVersionUID = 2935599519255109033L;
     private Integer key;
 
     public void setKey(Integer key) {
