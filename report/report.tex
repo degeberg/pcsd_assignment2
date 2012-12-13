@@ -88,9 +88,8 @@
 \begin{enumerate}[(a)]
     \item When using force and no-steal, the \textsc{Redo} is not necessary
         because we are guaranteed that the changes are written to disk.
-        However, \textsc{Undo} is still necessary because we want to restore to
-        a consistent state, so we need to deal with undoing uncommitted
-        transactions.
+        However, \textsc{Undo} is not necessary either because we are ensured
+        that we only writes on commit, and nobody steals the page.
     \item Non-volatile storage retains the stored information when powered
         down, such as a regular HDD\@. This is unlike volatile storage/memory
         like RAM, that requires power at all time to retain the data.
