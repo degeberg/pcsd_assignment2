@@ -32,7 +32,7 @@
     \item The Strict 2PL protocol only allows conflict serializable schedules,
         so it could not have generated Schedule~1.
 
-        Foo\todo{Schedule~2 could probably be made by Strict 2PL. Add the lock operations.}
+        %Foo\todo{Schedule~2 could probably be made by Strict 2PL. Add the lock operations.}
 \end{enumerate}
 
 \begin{figure}[h]
@@ -97,31 +97,25 @@
         Stable storage is non-volatile storage that also ensures atomicity of
         write operations.
     \item In Write-Ahead Loggin (WAL), we need to force a log write when doing
-        a commit. This is necessary because\ldots \todo{finish and add one more
-        case}
+        a commit. This is necessary because\ldots %\todo{finish and add one more case}
 \end{enumerate}
 
 \subsection{Question 4: ARIES}
 
-Winner transactions: $T_3$
-
-Loser transactions: $T_1$, $T_2$
-
-Start of Redo: smallest recLSN = 3
-
-Stop of Undo: 3
-
-Undone: $\{3, 4, 5, 8, 9\}$
-
-Rewritten: $\{P_1, P_2, P_3, P_5\}$
-
-\todo[inline]{Write some text and add new log entries.}
+\begin{itemize}
+    \item Winner transactions: $\{T_3\}$
+    \item Loser transactions: $\{T_1, T_2\}$
+    \item Start of Redo: 3 (the smallest recLSN)
+    \item Stop of Undo: 3
+    \item Undone LSNs: $\{3, 4, 5, 8, 9\}$
+    \item Rewritten pages: $\{P_1, P_2, P_3, P_5\}$
+\end{itemize}
 
 \begin{table}[h]
     \centering
     \subfloat[Dirty page table after analysis.]{
-        \begin{tabular}{l|l}
-            \toprule
+    \begin{tabular}{l|l}
+        \toprule
             \textbf{pageID} & \textbf{recLSN} \\
             \midrule
             $P_2$ & 3 \\
@@ -171,12 +165,38 @@ Rewritten: $\{P_1, P_2, P_3, P_5\}$
 \section{Implementation}
 
 \subsection{Question 1}
+
+I implemented the logger in \texttt{assignmentImplementation.MyLogger}. This
+simply takes a log file as a \texttt{RandomAccessFile} in the constructor.
+Calling \texttt{logRequest} creates a \texttt{Future<?>} that writes to the log
+file. The written contents are the byte size of the serialized
+\texttt{LogRequest} followed by the serialized \texttt{LogRequest} itself.
+
+The checkpointer in \texttt{assignmentImplementation.MyCheckpointer} takes an
+instance of \texttt{KeyValueBaseImpl} and \texttt{IndexImpl}. The checkpointer
+does the quiesce-flush-resume loop every every two seconds forever.
+
 \subsection{Question 2}
+
+I tested the implementation by first writing some things to the database
+ensuring that log records are written. I consider the database crashed if it
+has a non-empty log file. Simply killing the server is sufficient to crash it.
+Starting it again shows that it correctly redos the actions written to the log.
+
 \subsection{Question 4}
+
+An obvious way to test the logging overhead would be to measure the performance
+with logging disabled and enabled. The actual measuring could be done like
+throughput and latency was measured in assignment~1.
+
 \subsection{Question 5}
+
+This was not done.
 
 \section{Extensions}
 
 \subsection{Question 6}
+
+Not implemented.
 
 \end{document}
