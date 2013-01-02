@@ -52,7 +52,9 @@ public class MyLogger extends Thread implements Logger {
 		            return null;
 		        }
 		        
-		        logger.wait(groupTimeout);
+		        synchronized(logger) {
+    		        logger.wait(groupTimeout);
+		        }
 
 		        synchronized(logger) {
     		        ByteArrayOutputStream b = new ByteArrayOutputStream();
