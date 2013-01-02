@@ -20,7 +20,7 @@ public class Main {
 		ValueListImpl vl = buildList(new int[]{1, 2, 3});
 		KeyImpl key = new KeyImpl();
 		key.setKey(42);
-		kv.insert(key, vl);
+		//kv.insert(key, vl);
 		
 		printKey(42);
 	}
