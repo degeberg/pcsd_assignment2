@@ -3,6 +3,7 @@ package assignmentImplementation;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -46,18 +47,21 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
         globalLock = new ReentrantLock();
         lockCount = 0;
         
-        RandomAccessFile logFile = new RandomAccessFile(LOG_PATH, "rws");
+        File logFile = new File(LOG_PATH);
+        boolean restore = logFile.exists();
         
-        logger = new MyLogger(logFile);
+        RandomAccessFile logRaf = new RandomAccessFile(logFile, "rws");
+        
+        logger = new MyLogger(logRaf);
         logger.start();
         
-        if (logFile.length() > 0) { // we probably crashed
-            restore(logFile);
+        if (restore) {
+            restore(logRaf);
         }
         
         logger.enable();
         
-        checkpointer = new MyCheckpointer(this, index);
+        checkpointer = new MyCheckpointer(this, index, logger);
         checkpointer.start();
     }
 
@@ -116,7 +120,12 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
             }
         }
 
-        index.flush();
+        try {
+            index.flush();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
         initialized = true;
     }
 
@@ -292,6 +301,7 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
 	}
 	
 	private void restore(RandomAccessFile logFile) throws Exception {
+	    index.restore();
 	    while (true) {
 	        int size;
 	        try {

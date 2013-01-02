@@ -1,6 +1,12 @@
 package keyValueBaseInterfaces;
 
-public class Pair<K, V> {
+import java.io.Serializable;
+
+public class Pair<K, V> implements Serializable {
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -4594021541262250026L;
     private K k;
     private V v;
     
@@ -20,5 +26,10 @@ public class Pair<K, V> {
     
     public V getValue(){
         return v;
+    }
+    
+    @Override
+    public String toString() {
+        return "(" + k + "," + v + ")";
     }
 }

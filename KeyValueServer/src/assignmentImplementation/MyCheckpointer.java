@@ -1,5 +1,7 @@
 package assignmentImplementation;
 
+import java.io.IOException;
+
 import keyValueBaseInterfaces.Checkpointer;
 
 public class MyCheckpointer extends Thread implements Checkpointer {
@@ -8,10 +10,12 @@ public class MyCheckpointer extends Thread implements Checkpointer {
 
     private KeyValueBaseImpl kv;
     private IndexImpl index;
+    private MyLogger logger;
     
-    public MyCheckpointer(KeyValueBaseImpl kv, IndexImpl index) {
+    public MyCheckpointer(KeyValueBaseImpl kv, IndexImpl index, MyLogger logger) {
         this.kv = kv;
         this.index = index;
+        this.logger = logger;
     }
     
 	@Override
@@ -22,8 +26,15 @@ public class MyCheckpointer extends Thread implements Checkpointer {
             } catch (InterruptedException e) {
                 // doesn't matter
             }
+	        //System.out.println("RUNNING CHECKPOINTER");
 	        kv.quiesce();
-	        index.flush();
+	        try {
+    	        index.flush();
+    	        logger.truncate();
+	        } catch (IOException e) {
+	            // fuck...
+	            e.printStackTrace();
+	        }
 	        kv.resume();
 	    }
 	}

@@ -1,6 +1,7 @@
 package assignmentImplementation;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.RandomAccessFile;
 import java.util.concurrent.Callable;
@@ -36,7 +37,7 @@ public class MyLogger extends Thread implements Logger {
 
 	@Override
 	public void run() {
-	    executor = Executors.newFixedThreadPool(1);
+	    executor = Executors.newFixedThreadPool(groupSize);
 	}
 	
 	public void enable() {
@@ -71,10 +72,14 @@ public class MyLogger extends Thread implements Logger {
 		        return null;
 		    }
 		});
-		if (++groupWaiting == groupSize) {
+		if (enabled && ++groupWaiting == groupSize) {
 		    notifyAll();
 		}
 		return f;
+	}
+	
+	synchronized public void truncate() throws IOException {
+	    logFile.setLength(0);
 	}
 
 }

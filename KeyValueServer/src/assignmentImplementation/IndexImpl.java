@@ -1,6 +1,12 @@
 package assignmentImplementation;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -187,8 +193,32 @@ public class IndexImpl implements Index<KeyImpl,ValueListImpl>
         }
     }
     
-    public void flush() {
+    public void flush() throws IOException {
         store.flush();
+        
+        BufferedOutputStream buffer = new BufferedOutputStream(new FileOutputStream("/tmp/pcsd_index"));
+        ObjectOutputStream out = new ObjectOutputStream(buffer);
+        try {
+            out.writeObject(positions);
+            out.writeObject(blocks);
+        } finally {
+            out.close();
+        }
+    }
+    
+    @SuppressWarnings("unchecked")
+    public void restore() throws IOException {
+        BufferedInputStream buffer = new BufferedInputStream(new FileInputStream("/tmp/pcsd_index"));
+        ObjectInputStream in = new ObjectInputStream(buffer);
+        try {
+            positions = (TreeMap<KeyImpl, Pair<Long, Integer>>) in.readObject();
+            System.out.println("Restored positions: " + positions);
+            blocks = (ArrayList<Pair<Long, Long>>) in.readObject();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } finally {
+            in.close();
+        }
     }
     
     private class LogEntry {
