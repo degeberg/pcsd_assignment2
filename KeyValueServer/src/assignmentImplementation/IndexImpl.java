@@ -191,31 +191,6 @@ public class IndexImpl implements Index<KeyImpl,ValueListImpl>
         store.flush();
     }
     
-    /*
-    private Object deserialize(byte[] buf) throws IOException {
-        ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(buf));
-        try {
-            return in.readObject();
-        } catch (ClassNotFoundException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            return null;
-        } finally {
-            in.close();
-        }
-    }
-    
-    private byte[] serialize(Serializable o) throws IOException {
-        ByteArrayOutputStream b = new ByteArrayOutputStream();
-        ObjectOutputStream out = new ObjectOutputStream(b);
-        try {
-            out.writeObject(o);
-        } finally {
-            out.close();
-        }
-        return b.toByteArray();
-    }
-    */
     private class LogEntry {
         
         private OpType type;

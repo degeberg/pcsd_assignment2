@@ -117,6 +117,7 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
         }
 
         initialized = true;
+        index.flush();
         w.unlock();
     }
 
@@ -146,8 +147,8 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
         w.lock();
         try {
             LogRecord r = new LogRecord(index.getClass(), "insert", new Object[]{k,v});
-            logger.logRequest(r).get();
             index.insert(k, v);
+            logger.logRequest(r).get();
         } catch (InterruptedException | ExecutionException e) {
             // TODO What else to do?
             throw new RuntimeException(e);
@@ -167,8 +168,8 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
         w.lock();
         try {
             LogRecord r = new LogRecord(index.getClass(), "update", new Object[]{k,newV});
-            logger.logRequest(r).get();
             index.update(k, newV);
+            logger.logRequest(r).get();
         } catch (InterruptedException | ExecutionException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -187,8 +188,8 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
         w.lock();
         try {
             LogRecord r = new LogRecord(index.getClass(), "delete", new Object[]{k});
-            logger.logRequest(r).get();
             index.remove(k);
+            logger.logRequest(r).get();
         } catch (InterruptedException | ExecutionException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -243,8 +244,8 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
         w.lock();
         try {
             LogRecord r = new LogRecord(index.getClass(), "bulkPut", new Object[]{mappings});
-            logger.logRequest(r).get();
             index.bulkPut(mappings);
+            logger.logRequest(r).get();
         } catch (InterruptedException | ExecutionException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();

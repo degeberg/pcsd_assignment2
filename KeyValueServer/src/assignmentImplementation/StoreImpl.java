@@ -34,7 +34,7 @@ public class StoreImpl implements Store
 
     @Override
     public void write(Long position, byte[] value) {
-        mmapfile.put(value, position);
+        mmapfile.writePinned(value, position);
     }
     
     public void flush() {

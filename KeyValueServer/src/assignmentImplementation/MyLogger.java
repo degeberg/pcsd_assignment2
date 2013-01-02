@@ -16,15 +16,27 @@ public class MyLogger extends Thread implements Logger {
     private RandomAccessFile logFile;
     private ExecutorService executor;
     private boolean enabled;
+    private int groupSize;
+    private int groupTimeout; // ms
+    private int groupWaiting;
     
     public MyLogger(RandomAccessFile logFile) {
         this.logFile = logFile;
         this.enabled = false;
+        this.groupSize = 5;
+        this.groupTimeout = 150;
+        this.groupWaiting = 0;
+    }
+
+    public MyLogger(RandomAccessFile logFile, int groupSize, int groupTimeout) {
+        this(logFile);
+        this.enabled = false;
+        this.groupSize = groupSize;
     }
 
 	@Override
 	public void run() {
-	    executor = Executors.newFixedThreadPool(10);
+	    executor = Executors.newFixedThreadPool(1);
 	}
 	
 	public void enable() {
@@ -33,24 +45,34 @@ public class MyLogger extends Thread implements Logger {
 
 	@Override
 	synchronized public Future<?> logRequest(final LogRecord record) {
-		return executor.submit(new Callable<Void>() {
+	    final MyLogger logger = this;
+		Future<?> f = executor.submit(new Callable<Void>() {
 		    public Void call() throws Exception {
 		        if (!enabled) {
 		            return null;
 		        }
 		        
-		        ByteArrayOutputStream b = new ByteArrayOutputStream();
-		        ObjectOutputStream out = new ObjectOutputStream(b);
-		        try {
-		            out.writeObject(record);
-		            logFile.writeInt(b.size());
-    		        logFile.write(b.toByteArray());
-		        } finally {
-		            out.close();
+		        logger.wait(groupTimeout);
+
+		        synchronized(logger) {
+    		        ByteArrayOutputStream b = new ByteArrayOutputStream();
+    		        ObjectOutputStream out = new ObjectOutputStream(b);
+    		        try {
+    		            out.writeObject(record);
+    		            logFile.writeInt(b.size());
+        		        logFile.write(b.toByteArray());
+    		        } finally {
+    		            out.close();
+    		        }
+		            groupWaiting--;
 		        }
 		        return null;
 		    }
 		});
+		if (++groupWaiting == groupSize) {
+		    notifyAll();
+		}
+		return f;
 	}
 
 }
