@@ -156,14 +156,14 @@ public class MemoryMappedPinnable extends MemoryMappedFile {
 		 * region at some address
 		 */
 		public boolean overlaps(PinnedRegion region) {
-			return ((this.startPosition >= region.startPosition && this.startPosition <= region.getEndPosition()) ||
-					(region.startPosition >= this.startPosition && region.startPosition <= this.getEndPosition()));
+			return ((this.startPosition >= region.startPosition && this.startPosition < region.getEndPosition()) ||
+					(region.startPosition >= this.startPosition && region.startPosition < this.getEndPosition()));
 		}
 		
 		@Override
 		public boolean equals(Object o) {
 			PinnedRegion p = (PinnedRegion) o;
-			return (this.startPosition == p.startPosition && this.size == p.size);
+			return (this.startPosition.equals(p.startPosition) && this.size == p.size);
 		}
 		
 		@Override
