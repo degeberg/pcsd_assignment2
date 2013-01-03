@@ -42,7 +42,7 @@ public class IndexImpl implements Index<KeyImpl,ValueListImpl>
         if (positions.containsKey(k)) {
             throw new KeyAlreadyPresentException(k);
         }
-        System.err.println("Writing key " + k.getKey());
+        
         byte[] s = ser.toByteArray(v);
         long pos = -1;
         for (int i = 0; i < blocks.size(); ++i) {
@@ -182,7 +182,6 @@ public class IndexImpl implements Index<KeyImpl,ValueListImpl>
                 transactionLog.add(new LogEntry(OpType.INSERT, p.getKey(), null));
             }
         } catch (Exception e) {
-            System.out.println("rolling back bulkPut");
             rollbackTransaction();
         }
     }
@@ -209,20 +208,16 @@ public class IndexImpl implements Index<KeyImpl,ValueListImpl>
     }
     
     public void flush() throws IOException {
-        System.err.println("Flushing store");
         store.flush();
         
         BufferedOutputStream buffer = new BufferedOutputStream(new FileOutputStream("/tmp/pcsd_index"));
         ObjectOutputStream out = new ObjectOutputStream(buffer);
         try {
-            System.err.println("Writing positions");
             out.writeObject(positions);
-            System.err.println("Writing reserved blocks");
             out.writeObject(blocks);
         } finally {
             out.close();
         }
-        System.err.println("Done writing");
     }
     
     @SuppressWarnings("unchecked")
@@ -231,7 +226,6 @@ public class IndexImpl implements Index<KeyImpl,ValueListImpl>
         ObjectInputStream in = new ObjectInputStream(buffer);
         try {
             positions = (TreeMap<KeyImpl, Pair<Long, Integer>>) in.readObject();
-            System.out.println("Restored positions: " + positions);
             blocks = (ArrayList<Pair<Long, Long>>) in.readObject();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();

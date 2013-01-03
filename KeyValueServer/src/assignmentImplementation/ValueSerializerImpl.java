@@ -9,7 +9,6 @@ public class ValueSerializerImpl implements ValueSerializer<ValueListImpl> {
 
     @Override
     public ValueListImpl fromByteArray(byte[] array) throws IOException {
-        System.out.println("asdf: " + array.length);
         if (array.length % 4 != 0)
             return null;
         ValueListImpl vl = new ValueListImpl();
@@ -29,7 +28,6 @@ public class ValueSerializerImpl implements ValueSerializer<ValueListImpl> {
     public byte[] toByteArray(ValueListImpl v) throws IOException {
         List<ValueImpl> l = v.toList();
         byte[] out = new byte[l.size() * 4];
-        System.out.println(l.size() + ", " + out.length);
         int idx = 0;
         for (ValueImpl vi : l) {
             Integer i2 = vi.getValue();
