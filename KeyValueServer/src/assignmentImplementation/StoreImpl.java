@@ -37,6 +37,18 @@ public class StoreImpl implements Store
         mmapfile.writePinned(value, position);
     }
     
+    public void writeNow(Long position, byte[] value) {
+        mmapfile.put(value, position);
+    }
+    
+    public void unpin(long offset, int length) {
+        try {
+            mmapfile.unpin(offset, length);
+        } catch (IndexOutOfBoundsException e) {
+            
+        }
+    }
+    
     public void flush() {
         mmapfile.flush();
     }

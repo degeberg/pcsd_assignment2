@@ -26,7 +26,6 @@ public class MyCheckpointer extends Thread implements Checkpointer {
             } catch (InterruptedException e) {
                 // doesn't matter
             }
-	        //System.out.println("RUNNING CHECKPOINTER");
 	        kv.quiesce();
 	        try {
     	        index.flush();

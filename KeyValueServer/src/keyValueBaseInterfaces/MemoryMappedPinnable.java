@@ -163,7 +163,7 @@ public class MemoryMappedPinnable extends MemoryMappedFile {
 		@Override
 		public boolean equals(Object o) {
 			PinnedRegion p = (PinnedRegion) o;
-			return (this.startPosition.equals(p.startPosition) && this.size == p.size);
+			return (this.startPosition.equals(p.startPosition) && this.size.equals(p.size));
 		}
 		
 		@Override

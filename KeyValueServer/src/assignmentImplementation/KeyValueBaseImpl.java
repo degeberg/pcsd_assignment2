@@ -13,8 +13,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import keyValueBaseExceptions.BeginGreaterThanEndException;
@@ -35,8 +33,7 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
     private boolean initialized;
     private IndexImpl index;
     private HashMap<KeyImpl, ReentrantReadWriteLock> lockTable;
-    private Lock globalLock;
-    private int lockCount;
+    private ReentrantReadWriteLock globalLock;
     private MyLogger logger;
     private Thread checkpointer;
 
@@ -44,8 +41,7 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
         initialized = false;
         this.index = index;
         lockTable = new HashMap<>();
-        globalLock = new ReentrantLock();
-        lockCount = 0;
+        globalLock = new ReentrantReadWriteLock(true);
         
         File logFile = new File(LOG_PATH);
         boolean restore = logFile.exists();
@@ -55,14 +51,11 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
         logger = new MyLogger(logRaf);
         logger.start();
         
+        checkpointer = new MyCheckpointer(this, index, logger);
+        
         if (restore) {
             restore(logRaf);
         }
-        
-        logger.enable();
-        
-        checkpointer = new MyCheckpointer(this, index, logger);
-        checkpointer.start();
     }
 
     @Override
@@ -76,6 +69,7 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
         Scanner s = null;
         BufferedReader b = null;
 
+        index.init = true;
         try {
             b = new BufferedReader(new FileReader(serverFilename));
             String str;
@@ -119,6 +113,7 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
                 }
             }
         }
+        index.init = false;
 
         try {
             index.flush();
@@ -126,6 +121,8 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+        checkpointer.start();
+        logger.enable();
         initialized = true;
     }
 
@@ -217,11 +214,8 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
         ArrayList<ValueListImpl> list = new ArrayList<ValueListImpl>();
         for (ValueListImpl v : index.scan(begin, end)) {
             if (p.evaluate(v)) {
-                System.out.println("predicate matched");
                 list.add(v);
             }
-            else
-                System.out.println("predicate failed");
         }
         return list;
     }
@@ -285,19 +279,12 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
     
 	@Override
 	public void quiesce() {
-	    globalLock.lock();
-	    while (lockCount > 0) {
-	        try {
-                wait();
-            } catch (InterruptedException e) {
-                // Doesn't matter...
-            }
-	    }
+	    globalLock.writeLock().lock();
 	}
 
 	@Override
 	public void resume() {
-		globalLock.unlock();
+		globalLock.writeLock().unlock();
 	}
 	
 	private void restore(RandomAccessFile logFile) throws Exception {
@@ -323,19 +310,18 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
             }
 	    }
 	    
+        checkpointer.start();
+        logger.enable();
 	    initialized = true;
 	}
 
-    synchronized private void lockRead(KeyImpl k) {
-        globalLock.lock();
+    private void lockRead(KeyImpl k) {
+        globalLock.readLock().lock();
         ReentrantReadWriteLock l = getLock(k);
         l.readLock().lock();
-        lockCount++;
-        globalLock.unlock();
     }
     
     private boolean lockReadMany(List<KeyImpl> ks) {
-        globalLock.lock();
         ArrayList<KeyImpl> locked = new ArrayList<>();
         for (KeyImpl k : ks) {
             if (!getLock(k).readLock().tryLock()) {
@@ -345,20 +331,16 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
                 locked.add(k);
             }
         }
-        globalLock.unlock();
         return true;
     }
     
-    synchronized private void lockWrite(KeyImpl k) {
-        globalLock.lock();
+    private void lockWrite(KeyImpl k) {
+        globalLock.readLock().lock();
         ReentrantReadWriteLock l = getLock(k);
         l.writeLock().lock();
-        lockCount++;
-        globalLock.unlock();
     }
     
     private boolean lockWriteMany(List<KeyImpl> ks) {
-        globalLock.lock();
         ArrayList<KeyImpl> locked = new ArrayList<>();
         for (KeyImpl k : ks) {
             if (!getLock(k).writeLock().tryLock()) {
@@ -368,19 +350,17 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
                 locked.add(k);
             }
         }
-        globalLock.unlock();
         return true;
     }
     
-    synchronized private void unlock(KeyImpl k) {
+    private void unlock(KeyImpl k) {
         ReentrantReadWriteLock l = getLock(k);
         if (l.isWriteLocked()) {
             l.writeLock().unlock();
         } else {
             l.readLock().unlock();
         }
-        lockCount--;
-        notifyAll();
+        globalLock.readLock().unlock();
     }
     
     private void unlock(List<KeyImpl> ks) {
@@ -393,7 +373,7 @@ public class KeyValueBaseImpl implements KeyValueBase<KeyImpl, ValueListImpl>, K
         ReentrantReadWriteLock l;
         l = lockTable.get(k);
         if (l == null) {
-            l = new ReentrantReadWriteLock();
+            l = new ReentrantReadWriteLock(true);
             lockTable.put(k, l);
         }
         return l;

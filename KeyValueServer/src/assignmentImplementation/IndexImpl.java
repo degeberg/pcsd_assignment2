@@ -25,6 +25,7 @@ public class IndexImpl implements Index<KeyImpl,ValueListImpl>
     private ArrayList<Pair<Long, Long>> blocks;
     private LinkedList<LogEntry> transactionLog;
     private ValueSerializerImpl ser;
+    protected boolean init = false;
     
     public IndexImpl() throws IndexOutOfBoundsException, IOException {
         store = new StoreImpl();
@@ -41,6 +42,7 @@ public class IndexImpl implements Index<KeyImpl,ValueListImpl>
         if (positions.containsKey(k)) {
             throw new KeyAlreadyPresentException(k);
         }
+        System.err.println("Writing key " + k.getKey());
         byte[] s = ser.toByteArray(v);
         long pos = -1;
         for (int i = 0; i < blocks.size(); ++i) {
@@ -56,7 +58,19 @@ public class IndexImpl implements Index<KeyImpl,ValueListImpl>
         if (pos < 0)
             throw new IOException("No available space in mmap file");
         positions.put(k, new Pair<>(pos, s.length));
-        store.write(pos, s);
+        
+        if (init) {
+            // When initializing, we don't log, so we can save the overhead of pinning.
+            // This will speed up things.
+            store.writeNow(pos, s);
+        } else {
+            store.write(pos, s);
+        }
+    }
+    
+    public void unpinKey(KeyImpl k) {
+        Pair<Long, Integer> p = positions.get(k);
+        store.unpin(p.getKey(), p.getValue());
     }
 
     @Override
@@ -93,6 +107,7 @@ public class IndexImpl implements Index<KeyImpl,ValueListImpl>
             }
         }
         
+        unpinKey(k); // It might potentially have been pinned in memory.
         positions.remove(k);
     }
 
@@ -194,16 +209,20 @@ public class IndexImpl implements Index<KeyImpl,ValueListImpl>
     }
     
     public void flush() throws IOException {
+        System.err.println("Flushing store");
         store.flush();
         
         BufferedOutputStream buffer = new BufferedOutputStream(new FileOutputStream("/tmp/pcsd_index"));
         ObjectOutputStream out = new ObjectOutputStream(buffer);
         try {
+            System.err.println("Writing positions");
             out.writeObject(positions);
+            System.err.println("Writing reserved blocks");
             out.writeObject(blocks);
         } finally {
             out.close();
         }
+        System.err.println("Done writing");
     }
     
     @SuppressWarnings("unchecked")

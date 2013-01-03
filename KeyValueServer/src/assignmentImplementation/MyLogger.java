@@ -37,6 +37,8 @@ public class MyLogger extends Thread implements Logger {
 
 	@Override
 	public void run() {
+	    // Create thread pool for group commit. It should be as big as the group size
+	    // to ensure that we wake up enough waiting threads.
 	    executor = Executors.newFixedThreadPool(groupSize);
 	}
 	
@@ -54,10 +56,11 @@ public class MyLogger extends Thread implements Logger {
 		        }
 		        
 		        synchronized(logger) {
-    		        logger.wait(groupTimeout);
+    		        logger.wait(groupTimeout); // wait until we have a large enough group
 		        }
 
 		        synchronized(logger) {
+		            // write log to file
     		        ByteArrayOutputStream b = new ByteArrayOutputStream();
     		        ObjectOutputStream out = new ObjectOutputStream(b);
     		        try {
@@ -67,11 +70,15 @@ public class MyLogger extends Thread implements Logger {
     		        } finally {
     		            out.close();
     		        }
+    		        
+    		        // decrease group size
 		            groupWaiting--;
 		        }
 		        return null;
 		    }
 		});
+		
+		// check if group size is big enough
 		if (enabled && ++groupWaiting == groupSize) {
 		    notifyAll();
 		}
